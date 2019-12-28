@@ -76,10 +76,7 @@ const updateCommand: Command = async (args, std) => {
 
   const projectFilePath = path.join(cwd, "sourcecred.json");
   if (!(await fs.exists(projectFilePath))) {
-    return die(
-      std,
-      `no sourcecred.json file found. Please run sourcecred init first.`
-    );
+    return die(std, `no sourcecred.json file found; run sourcecred init.`);
   }
   const project = await loadProject(projectFilePath);
 
