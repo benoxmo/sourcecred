@@ -1,5 +1,6 @@
 // @flow
 
+import {type TimestampMs} from "../../util/timestamp";
 import Database from "better-sqlite3";
 import {SqliteMirror} from "./sqliteMirror";
 import dedent from "../../util/dedent";
@@ -25,12 +26,13 @@ describe("plugins/discord/sqliteMirror", () => {
   const testMessage = (
     id: Snowflake,
     channelId: Snowflake,
-    authorId: Snowflake
+    authorId: Snowflake,
+    timestampMs: TimestampMs = Date.parse("2020-03-03T23:35:10.615000+00:00")
   ): Message => ({
     id: id,
     channelId: channelId,
     authorId: authorId,
-    timestampMs: Date.parse("2020-03-03T23:35:10.615000+00:00"),
+    timestampMs: timestampMs,
     content: "Just going to drop this here",
     reactionEmoji: [customEmoji()],
     nonUserAuthor: false,
@@ -253,6 +255,37 @@ describe("plugins/discord/sqliteMirror", () => {
         non_user_author: 0,
         timestamp_ms: 1583278510615,
         content: "Just going to drop this here",
+      });
+    });
+
+    describe("nthMessageIdFromTail", () => {
+      function buildMessages() {
+        const channelId: Snowflake = "1";
+        const authorId: Snowflake = "2";
+
+        const db = new Database(":memory:");
+        const sqliteMirror = new SqliteMirror(db, "0");
+        sqliteMirror.addUser(testUser(authorId));
+        sqliteMirror.addChannel(testChannel(channelId));
+
+        const maxCount = 10;
+        var x = 1;
+        while (x <= maxCount) {
+          const msg = testMessage(String(x), channelId, authorId, x * 2);
+          sqliteMirror.addMessage(msg);
+          x++;
+        }
+        return {sqliteMirror, channelId};
+      }
+      it("retrieves nth message from tail", () => {
+        const {sqliteMirror, channelId} = buildMessages();
+        expect(sqliteMirror.nthMessageIdFromTail(channelId, 3)).toBe("7");
+      });
+      it("handles n greater than total message count", () => {
+        const {sqliteMirror, channelId} = buildMessages();
+        expect(sqliteMirror.nthMessageIdFromTail(channelId, 20)).toBe(
+          undefined
+        );
       });
     });
 
